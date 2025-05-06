@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tetris</title>
+    <style>
+        /* --- 1. GRUNDLEGENDE STYLES --- */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Press+Start+2P&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+        }
+
+        /* --- 2. SPIEL-CONTAINER UND CANVAS --- */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 15px;
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 3px solid #0ff;
+            width: 100%;
+            height: auto;
+        }
+
+        /* --- 3. SPIELINFORMATIONEN UND STEUERUNG --- */
+        .game-info {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin: 0 5px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.3);
+        }
+        
+        .stat-box h3 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #0ff;
+            font-weight: 600;
+        }
+        
+        .stat-box p {
+            margin: 5px 0 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        
+        .next-piece-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .next-piece-container h3 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            color: #0ff;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .next-piece {
+            margin: 0 auto;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+        }
+        
+        /* --- 4. TOUCH-STEUERELEMENTE --- */
+        .touch-controls {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 15px;
+        }
+        
+        .controls-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+        
+        .control-btn {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(145deg, #30435e, #1a2a44);
+            color: #0ff;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+        
+        /* --- 5. UI-ELEMENTE (PAUSE, GAME OVER) --- */
+        .pause-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #0ff;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+        
+        .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .game-over-screen.show {
+            opacity: 1;
+        }
+        
+        .game-over-screen h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #f00;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+        
+        .restart-btn {
+            background: linear-gradient(to right, #0f0, #0ff);
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        /* Verstecke Tastatur-Anleitung auf Mobil */
+        .keyboard-controls {
+            display: none;
+        }
+        
+        /* --- 6. RESPONSIVE DESIGN --- */
+        @media (min-width: 768px) {
+            .game-container {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                max-width: 700px;
+            }
+            
+            .canvas-container, .game-info, .touch-controls {
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+                width: 100%;
+            }
+            
+            .touch-controls {
+                display: none;
+            }
+            
+            .keyboard-controls {
+                display: block;
+                margin-top: 10px;
+                text-align: center;
+                color: #0ff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>T E T R I S</h1>
+    <div class="game-container">
+        <div class="canvas-container">
+            <canvas id="tetris"></canvas>
+            <button class="pause-btn" id="pauseBtn">⏸️</button>
+            <div class="game-over-screen" id="gameOverScreen">
+                <h2>GAME OVER</h2>
+                <p>Dein Punktestand: <span id="finalScore">0</span></p>
+                <button class="restart-btn" id="restartBtn">Nochmal spielen</button>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div class="game-stats">
+                <div class="stat-box">
+                    <h3>Punkte</h3>
+                    <p id="score">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Reihen</h3>
+                    <p id="lines">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Level</h3>
+                    <p id="level">1</p>
+                </div>
+            </div>
+            <div class="next-piece-container">
+                <h3>Nächster Stein</h3>
+                <canvas id="nextPiece" class="next-piece"></canvas>
+            </div>
+            <div class="keyboard-controls">
+                <p>← → : Bewegung | ↑ : Drehen | ↓ : Fallen | Leertaste : Sofort ablegen</p>
+            </div>
+        </div>
+        
+        <div class="touch-controls">
+            <div class="controls-row">
+                <button class="control-btn" id="rotateBtn">↻</button>
+            </div>
+            <div class="controls-row">
+                <button class="control-btn" id="leftBtn">←</button>
+                <button class="control-btn" id="hardDropBtn">⤓</button>
+                <button class="control-btn" id="rightBtn">→</button>
+            </div>
+            <div class="controls-row">
+                <button class="control-btn" id="downBtn">↓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * TETRIS - Ein klassisches Spiel in JavaScript
+         * =============================================
+         * Klar strukturierter Code - Leicht zu verstehen und zu modifizieren
+         */
+
+        /** 
+         * 1. INITIALISIERUNG UND GRUNDLEGENDE EINSTELLUNGEN
+         * --------------------------------------------------
+         */
+        // Canvas-Elemente und deren Kontext
+        const canvas = document.getElementById('tetris');
+        const nextCanvas = document.getElementById('nextPiece');
+        const ctx = canvas.getContext('2d');
+        const nextCtx = nextCanvas.getContext('2d');
+        
+        // Canvas-Dimensionen dynamisch festlegen
+        const canvasContainer = document.querySelector('.canvas-container');
+        function resizeCanvas() {
+            const containerWidth = canvasContainer.clientWidth;
+            const BOARD_WIDTH = 10;
+            const BOARD_HEIGHT = 20;
+            
+            // Blockgr��e basierend auf Container-Breite berechnen
+            const BLOCK_SIZE = Math.floor(containerWidth / BOARD_WIDTH);
+            
+            // Canvas-Dimensionen setzen
+            canvas.width = BLOCK_SIZE * BOARD_WIDTH;
+            canvas.height = BLOCK_SIZE * BOARD_HEIGHT;
+            
+            // Next-Piece Canvas aktualisieren
+            nextCanvas.width = 100;
+            nextCanvas.height = 100;
+            
+            return BLOCK_SIZE;
+        }
+        
+        let BLOCK_SIZE = resizeCanvas();
+        
+        // Bei Fenstergr��en�nderung Canvas neu skalieren
+        window.addEventListener('resize', () => {
+            BLOCK_SIZE = resizeCanvas();
+            draw(); // Spiel neu zeichnen
+        });
+        
+        /**
+         * 2. SPIELKONSTANTEN UND -VARIABLEN
+         * ---------------------------------
+         * Definiert Spielfeld, Tetrominosteine und Farben
+         */
+        // Spielfeld-Dimensionen
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        
+        // Farben für die Tetrominos (klassisches Tetris-Farbschema)
+        const COLORS = [
+            null,
+            '#FF0D72', // I - Pink
+            '#0DC2FF', // J - Light Blue
+            '#0DFF72', // L - Green
+            '#F538FF', // O - Purple
+            '#FF8E0D', // S - Orange
+            '#FFE138', // T - Yellow
+            '#3877FF'  // Z - Blue
+        ];
+
+        // Tetromino-Formen (7 klassische Formen)
+        const SHAPES = [
+            null,
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[1, 0, 0], [1, 1, 1], [0, 0, 0]],                         // J
+            [[0, 0, 1], [1, 1, 1], [0, 0, 0]],                         // L
+            [[1, 1], [1, 1]],                                          // O
+            [[0, 1, 1], [1, 1, 0], [0, 0, 0]],                         // S
+            [[0, 1, 0], [1, 1, 1], [0, 0, 0]],                         // T
+            [[1, 1, 0], [0, 1, 1], [0, 0, 0]]                          // Z
+        ];
+        
+        // Spielfeld erstellen
+        function createBoard() {
+            return Array.from(Array(BOARD_HEIGHT), () => Array(BOARD_WIDTH).fill(0));
+        }
+        
+        // Spielfeld-Matrix
+        let board = createBoard();
+        
+        // Einen zufälligen Tetromino erstellen
+        function createPiece(type) {
+            if (!type) {
+                type = Math.floor(Math.random() * 7) + 1;
+            }
+            
+            // Kopie der Blockform erstellen
+            const matrix = SHAPES[type].map(row => [...row]);
+            
+            // Alle 1en mit dem Typ-Wert (1-7) ersetzen, um die Farbe zu setzen
+            return matrix.map(row => row.map(value => value === 0 ? 0 : type));
+        }
+        
+        // Spielstatus-Variablen
+        let score = 0;                     // Punktzahl
+        let lines = 0;                     // Abgeräumte Linien
+        let level = 1;                     // Spiellevel (erhöht Fallgeschwindigkeit)
+        let dropCounter = 0;               // Zähler für Fallintervall
+        let dropInterval = 1000;           // Fallintervall in Millisekunden
+        let lastTime = 0;                  // Letzter Zeitstempel für Animation
+        let gameOver = false;              // Spielende-Status
+        
+        // Game over and pause
+        let isPaused = false;              // Pause-Status
+        
+        // DOM-Elemente
+        const scoreElement = document.getElementById('score');
+        const linesElement = document.getElementById('lines');
+        const levelElement = document.getElementById('level');
+        const finalScoreElement = document.getElementById('finalScore');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        
+        // Aktueller und nächster Stein
+        let player = {
+            pos: { x: 0, y: 0 },           // Position des aktuellen Steins
+            matrix: null                   // Form-Matrix des aktuellen Steins
+        };
+        let nextPiece = null;              // Nächster Stein für Vorschau
+        
+        // Geister-Stein Einstellung (zeigt an, wo Stein landen wird)
+        let showGhostPiece = true;
+        
+        // Animations-Variablen für Linien-Effekte
+        let clearAnimationLines = [];      // Zu löschende Linien
+        let clearAnimationProgress = 0;    // Fortschritt der Animation
+        let clearAnimationActive = false;  // Status der Animation
+        
+        // Geister-Stein zeichnen (zeigt, wo der Stein landen wird)
+        function drawGhostPiece() {
+            if (!player.matrix) return;
+            
+            // Spieler-Position klonen
+            const ghostPos = { x: player.pos.x, y: player.pos.y };
+            
+            // Geist nach unten bewegen bis zur Kollision
+            while (!collide(board, { pos: ghostPos, matrix: player.matrix })) {
+                ghostPos.y++;
+            }
+            
+            // Einen Schritt zurück (zur gültigen Position)
+            ghostPos.y--;
+            
+            // Nur zeichnen, wenn der Geist nicht an der gleichen Position wie der aktuelle Stein ist
+            if (ghostPos.y > player.pos.y) {
+                // Geist-Stein mit Transparenz zeichnen
+                player.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            const color = COLORS[value];
+                            // RGB-Komponenten extrahieren
+                            const r = parseInt(color.slice(1, 3), 16);
+                            const g = parseInt(color.slice(3, 5), 16);
+                            const b = parseInt(color.slice(5, 7), 16);
+                            
+                            // Mit Transparenz zeichnen
+                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+                            ctx.fillRect(
+                                (x + ghostPos.x) * BLOCK_SIZE,
+                                (y + ghostPos.y) * BLOCK_SIZE,
+                                BLOCK_SIZE, BLOCK_SIZE
+                            );
+                            
+                            // Umriss zeichnen
+                            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(
+                                (x + ghostPos.x) * BLOCK_SIZE,
+                                (y + ghostPos.y) * BLOCK_SIZE,
+                                BLOCK_SIZE, BLOCK_SIZE
+                            );
+                        }
+                    });
+                });
+            }
+        }
+        
+        // Nächster Stein - Vorschau zeichnen
+        function drawNextPiece() {
+            // Canvas leeren
+            nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+            
+            if (!nextPiece) return;
+            
+            // Hintergrund-Verlauf hinzufügen
+            const gradient = nextCtx.createLinearGradient(0, 0, nextCanvas.width, nextCanvas.height);
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 0.5)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            nextCtx.fillStyle = gradient;
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            
+            // Offset berechnen, um den Stein zu zentrieren
+            const blockSizePreview = Math.min(
+                Math.floor(nextCanvas.width / 5),
+                Math.floor(nextCanvas.height / 5)
+            );
+            
+            const pieceWidth = nextPiece[0].length;
+            const pieceHeight = nextPiece.length;
+            const offsetX = (nextCanvas.width - pieceWidth * blockSizePreview) / 2;
+            const offsetY = (nextCanvas.height - pieceHeight * blockSizePreview) / 2;
+            
+            // Nächsten Stein zeichnen
+            nextPiece.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        const color = COLORS[value];
+                        // Hauptblock
+                        nextCtx.fillStyle = color;
+                        nextCtx.fillRect(
+                            offsetX + x * blockSizePreview,
+                            offsetY + y * blockSizePreview,
+                            blockSizePreview,
+                            blockSizePreview
+                        );
+                        
+                        // Einfacher 3D-Effekt
+                        nextCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                        nextCtx.fillRect(
+                            offsetX + x * blockSizePreview,
+                            offsetY + y * blockSizePreview,
+                            blockSizePreview / 4,
+                            blockSizePreview / 4
+                        );
+                    }
+                });
+            });
+        }
+        
+        // Zeichenfunktion
+        function draw() {
+            // Canvas leeren
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Hintergrund mit Verlauf zeichnen
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+            bgGradient.addColorStop(1, 'rgba(0, 20, 40, 0.9)');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Rasterlinien zeichnen (subtil)
+            ctx.strokeStyle = 'rgba(0, 150, 200, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Vertikale Rasterlinien
+            for (let i = 0; i <= BOARD_WIDTH; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontale Rasterlinien
+            for (let i = 0; i <= BOARD_HEIGHT; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            
+            // Wenn aktiviert, Geister-Stein zeichnen (zeigt, wo der Stein landen wird)
+            if (showGhostPiece && player.matrix) {
+                drawGhostPiece();
+            }
+            
+            // Spielfeld zeichnen
+            drawBoard();
+            
+            // Aktuellen Stein zeichnen
+            if (player.matrix) {
+                drawMatrix(player.matrix, player.pos);
+            }
+            
+            // Vorschau des nächsten Steins zeichnen
+            drawNextPiece();
+        }
+        
+        /**
+         * 3. RENDERING-FUNKTIONEN
+         * ----------------------
+         * Alles, was mit dem Zeichnen auf dem Canvas zu tun hat
+         */
+        // Farbton ändern (für 3D-Effekt)
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1, 3), 16);
+            let G = parseInt(color.substring(3, 5), 16);
+            let B = parseInt(color.substring(5, 7), 16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R < 255) ? R : 255;
+            G = (G < 255) ? G : 255;
+            B = (B < 255) ? B : 255;
+
+            R = Math.max(0, R).toString(16).padStart(2, '0');
+            G = Math.max(0, G).toString(16).padStart(2, '0');
+            B = Math.max(0, B).toString(16).padStart(2, '0');
+
+            return `#${R}${G}${B}`;
+        }
+        
+        // Block mit 3D-Effekt zeichnen
+        function drawBlock(ctx, x, y, colorIndex) {
+            const color = COLORS[colorIndex];
+            
+            // Dunklere und hellere Versionen der Farbe für 3D-Effekt erzeugen
+            const darkerColor = shadeColor(color, -30);
+            const lighterColor = shadeColor(color, 30);
+            
+            // Hauptblock
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+            
+            // 3D-Effekt - helle Kante (oben, links)
+            ctx.fillStyle = lighterColor;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + BLOCK_SIZE, y);
+            ctx.lineTo(x + BLOCK_SIZE - BLOCK_SIZE/6, y + BLOCK_SIZE/6);
+            ctx.lineTo(x + BLOCK_SIZE/6, y + BLOCK_SIZE/6);
+            ctx.lineTo(x, y);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + BLOCK_SIZE);
+            ctx.lineTo(x + BLOCK_SIZE/6, y + BLOCK_SIZE - BLOCK_SIZE/6);
+            ctx.lineTo(x + BLOCK_SIZE/6, y + BLOCK_SIZE/6);
+            ctx.lineTo(x, y);
+            ctx.fill();
+            
+            // 3D-Effekt - dunkle Kante (unten, rechts)
+            ctx.fillStyle = darkerColor;
+            ctx.beginPath();
+            ctx.moveTo(x + BLOCK_SIZE, y);
+            ctx.lineTo(x + BLOCK_SIZE, y + BLOCK_SIZE);
+            ctx.lineTo(x + BLOCK_SIZE - BLOCK_SIZE/6, y + BLOCK_SIZE - BLOCK_SIZE/6);
+            ctx.lineTo(x + BLOCK_SIZE - BLOCK_SIZE/6, y + BLOCK_SIZE/6);
+            ctx.lineTo(x + BLOCK_SIZE, y);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y + BLOCK_SIZE);
+            ctx.lineTo(x + BLOCK_SIZE, y + BLOCK_SIZE);
+            ctx.lineTo(x + BLOCK_SIZE - BLOCK_SIZE/6, y + BLOCK_SIZE - BLOCK_SIZE/6);
+            ctx.lineTo(x + BLOCK_SIZE/6, y + BLOCK_SIZE - BLOCK_SIZE/6);
+            ctx.lineTo(x, y + BLOCK_SIZE);
+            ctx.fill();
+            
+            // Innerer Schatten
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + BLOCK_SIZE/6, y + BLOCK_SIZE/6, BLOCK_SIZE - BLOCK_SIZE/3, BLOCK_SIZE - BLOCK_SIZE/3);
+        }
+        
+        // Tetromino zeichnen
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        drawBlock(
+                            ctx,
+                            (x + offset.x) * BLOCK_SIZE,
+                            (y + offset.y) * BLOCK_SIZE,
+                            value // Farbindex (1-7)
+                        );
+                    }
+                });
+            });
+        }
+        
+        // Spielbrett zeichnen
+        function drawBoard() {
+            board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        drawBlock(
+                            ctx,
+                            x * BLOCK_SIZE,
+                            y * BLOCK_SIZE,
+                            value // Farbindex (1-7)
+                        );
+                    }
+                });
+            });
+        }
+        
+        /**
+         * 4. SPIELMECHANIK
+         * ---------------
+         * Kernfunktionen, die die Spiellogik steuern
+         */
+        // Kollisionserkennung
+        function collide(board, player) {
+            const [m, o] = [player.matrix, player.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                        (board[y + o.y] &&
+                        board[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Aktuellen Stein ins Spielfeld übernehmen
+        function merge(board, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        board[y + player.pos.y][x + player.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        // Spieler zurücksetzen und neuen Stein erzeugen
+        function playerReset() {
+            // Aktuellen Stein auf den nächsten Stein setzen oder einen neuen erzeugen, falls keiner existiert
+            player.matrix = nextPiece || createPiece();
+            // Nächsten Stein für die Vorschau generieren
+            nextPiece = createPiece();
+            
+            // Position zurücksetzen (oben mittig)
+            player.pos.y = 0;
+            player.pos.x = Math.floor(BOARD_WIDTH / 2) - Math.floor(player.matrix[0].length / 2);
+            
+            // Auf Game Over prüfen
+            if (collide(board, player)) {
+                gameOver = true;
+                finalScoreElement.textContent = score;
+                gameOverScreen.style.display = 'flex';
+                
+                // Game Over Screen mit Animation einblenden
+                setTimeout(() => {
+                    gameOverScreen.classList.add('show');
+                }, 100);
+            }
+        }
+
+        // Aktuellen Stein nach unten bewegen
+        function playerDrop() {
+            player.pos.y++;
+            if (collide(board, player)) {
+                player.pos.y--;
+                merge(board, player);
+                playerReset();
+                sweepLines();
+            }
+            dropCounter = 0;
+        }
+
+        // Matrix-Rotationslogik
+        function rotate(matrix, dir) {
+            // Matrix transponieren
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                }
+            }
+            
+            // Jede Zeile für im Uhrzeigersinn umkehren, oder jede Spalte für gegen den Uhrzeigersinn
+            if (dir > 0) {
+                matrix.forEach(row => row.reverse());
+            } else {
+                matrix.reverse();
+            }
+        }
+        
+        // Stein drehen
+        function playerRotate(dir) {
+            const pos = player.pos.x;
+            let offset = 1;
+            rotate(player.matrix, dir);
+            
+            // Kollision während der Drehung behandeln, indem der Stein nach links oder rechts verschoben wird
+            while (collide(board, player)) {
+                player.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > player.matrix[0].length) {
+                    rotate(player.matrix, -dir);
+                    player.pos.x = pos;
+                    return;
+                }
+            }
+        }
+        
+        // Hard Drop (Stein sofort nach unten fallen lassen)
+        function playerHardDrop() {
+            while (!collide(board, player)) {
+                player.pos.y++;
+            }
+            player.pos.y--;
+            merge(board, player);
+            playerReset();
+            sweepLines();
+            dropCounter = 0;
+        }
+        
+        // Aktuellen Stein nach links oder rechts bewegen
+        function playerMove(dir) {
+            player.pos.x += dir;
+            if (collide(board, player)) {
+                player.pos.x -= dir;
+            }
+        }
+        
+        // Auf vollständige Linien prüfen und Animation starten
+        function sweepLines() {
+            clearAnimationLines = [];
+            
+            // Vollständige Linien finden
+            outer: for (let y = board.length - 1; y >= 0; --y) {
+                for (let x = 0; x < board[y].length; ++x) {
+                    if (board[y][x] === 0) continue outer;
+                }
+                
+                // Vollständige Linie zum Animations-Array hinzufügen
+                clearAnimationLines.push(y);
+            }
+            
+            if (clearAnimationLines.length > 0) {
+                // Animation starten
+                clearAnimationActive = true;
+                clearAnimationProgress = 0;
+            }
+        }
+        
+        // Animation für Linien-Lösch-Effekt
+        function animateLineClear() {
+            if (!clearAnimationActive) return;
+            
+            // Weißes Aufblitzen über den Linien zeichnen
+            clearAnimationLines.forEach(y => {
+                const alpha = 1 - clearAnimationProgress / 10; // Ausblenden
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.fillRect(0, y * BLOCK_SIZE, canvas.width, BLOCK_SIZE);
+                
+                // Funkel-Effekt hinzufügen
+                for (let i = 0; i < 3; i++) {
+                    const x = Math.random() * canvas.width;
+                    const size = Math.random() * 3 + 1;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(x, y * BLOCK_SIZE + BLOCK_SIZE/2, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            
+            clearAnimationProgress++;
+            
+            if (clearAnimationProgress >= 10) {
+                clearAnimationActive = false;
+                
+                // Die vollständigen Linien entfernen und leere Linien oben hinzufügen
+                clearAnimationLines.sort((a, b) => b - a); // In absteigender Reihenfolge sortieren
+                clearAnimationLines.forEach(y => {
+                    board.splice(y, 1);
+                    board.unshift(Array(BOARD_WIDTH).fill(0));
+                });
+                
+                // Punktzahl basierend auf gelöschten Linien aktualisieren
+                const linesCleared = clearAnimationLines.length;
+                const linePoints = [0, 40, 100, 300, 1200];
+                score += linePoints[linesCleared] * level;
+                lines += linesCleared;
+                
+                // Level alle 10 Linien erhöhen
+                level = Math.floor(lines / 10) + 1;
+                
+                // Geschwindigkeit mit Level erhöhen
+                dropInterval = 1000 * Math.pow(0.8, level - 1);
+                
+                updateScore();
+                clearAnimationLines = [];
+                clearAnimationProgress = 0;
+            }
+        }
+        
+        // Punktzahl-Anzeige aktualisieren
+        function updateScore() {
+            scoreElement.innerText = score;
+            linesElement.innerText = lines;
+            levelElement.innerText = level;
+        }
+        
+        /**
+         * 5. EVENT HANDLING 
+         * ----------------
+         * Input-Verarbeitung für Tastatur und Touch
+         */
+        // Tastatureingabe verarbeiten (für Desktop)
+        document.addEventListener('keydown', event => {
+            if (gameOver) return;
+            
+            switch (event.keyCode) {
+                case 37: // Pfeil links
+                    playerMove(-1);
+                    break;
+                case 39: // Pfeil rechts
+                    playerMove(1);
+                    break;
+                case 40: // Pfeil runter
+                    playerDrop();
+                    break;
+                case 38: // Pfeil hoch
+                    playerRotate(1);
+                    break;
+                case 32: // Leertaste
+                    playerHardDrop();
+                    break;
+            }
+        });
+        
+        /**
+         * 6. GAME LOOP UND ANIMATION
+         * -------------------------
+         * Hauptspielschleife für kontinuierliche Updates
+         */
+        // Spiel-Loop
+        function update(time = 0) {
+            if (gameOver) {
+                requestAnimationFrame(update);
+                return;
+            }
+            
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            
+            if (!isPaused) {
+                // Normalen Spielfortschritt behandeln
+                if (!clearAnimationActive) {
+                    // Fallmechanik
+                    dropCounter += deltaTime;
+                    if (dropCounter > dropInterval) {
+                        playerDrop();
+                    }
+                }
+            }
+            
+            draw();
+            
+            // Linien-Lösch-Animation behandeln, falls aktiv
+            if (clearAnimationActive) {
+                animateLineClear();
+            }
+            
+            requestAnimationFrame(update);
+        }
+        
+        // Spiel zurücksetzen
+        function resetGame() {
+            board = createBoard();
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+            gameOver = false;
+            isPaused = false;
+            clearAnimationLines = [];
+            clearAnimationProgress = 0;
+            clearAnimationActive = false;
+            nextPiece = createPiece();
+            playerReset();
+            updateScore();
+            gameOverScreen.style.display = 'none';
+            gameOverScreen.classList.remove('show');
+            pauseBtn.textContent = '⏸️';
+        }
+
+        // Pause umschalten
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? '▶️' : '⏸️';
+        }
+        
+        /**
+         * 7. TOUCH-STEUERUNG
+         * ----------------
+         * Touch-Verarbeitung für mobile Geräte
+         */
+        // DOM-Elemente für Touch-Steuerung
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const downBtn = document.getElementById('downBtn');
+        const rotateBtn = document.getElementById('rotateBtn');
+        const hardDropBtn = document.getElementById('hardDropBtn');
+        
+        // Touch-Steuerung verarbeiten
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameOver) playerMove(-1);
+        });
+        
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameOver) playerMove(1);
+        });
+        
+        downBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameOver) playerDrop();
+        });
+        
+        rotateBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameOver) playerRotate(1);
+        });
+        
+        hardDropBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameOver) playerHardDrop();
+        });
+        
+        // Auch Mausunterstützung für die Buttons hinzufügen (zum Testen auf Desktop)
+        leftBtn.addEventListener('click', () => {
+            if (!gameOver) playerMove(-1);
+        });
+        
+        rightBtn.addEventListener('click', () => {
+            if (!gameOver) playerMove(1);
+        });
+        
+        downBtn.addEventListener('click', () => {
+            if (!gameOver) playerDrop();
+        });
+        
+        rotateBtn.addEventListener('click', () => {
+            if (!gameOver) playerRotate(1);
+        });
+        
+        hardDropBtn.addEventListener('click', () => {
+            if (!gameOver) playerHardDrop();
+        });
+        
+        // Wischgestenerkennung
+        let touchStartX = null;
+        let touchStartY = null;
+        let touchTimeStart = null;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameOver) return;
+            
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchTimeStart = Date.now();
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            if (gameOver || !touchStartX || !touchStartY) return;
+            
+            const touch = e.changedTouches[0];
+            const diffX = touch.clientX - touchStartX;
+            const diffY = touch.clientY - touchStartY;
+            const timeDiff = Date.now() - touchTimeStart;
+            
+            // Tippen erkennen (schnelle Berührung ohne viel Bewegung)
+            if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && timeDiff < 300) {
+                // Tippen erkannt - Stein drehen
+                playerRotate(1);
+            } else if (timeDiff < 500) { // Nur Wischgesten erkennen, wenn sie schnell genug sind
+                // Horizontales Wischen
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) {
+                    if (diffX > 0) {
+                        playerMove(1); // Rechts
+                    } else {
+                        playerMove(-1); // Links
+                    }
+                }
+                // Vertikales Wischen
+                else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 30) {
+                    if (diffY > 0) {
+                        playerDrop(); // Runter
+                    } else {
+                        playerHardDrop(); // Hard Drop
+                    }
+                }
+            }
+            
+            // Touch-Werte zurücksetzen
+            touchStartX = null;
+            touchStartY = null;
+            touchTimeStart = null;
+        });
+
+        // Standard-Touch-Verhalten verhindern, um Scrollen zu vermeiden
+        document.addEventListener('touchmove', (e) => {
+            if (e.target === canvas) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Pause-Button
+        pauseBtn.addEventListener('click', togglePause);
+        
+        // Neustart-Button
+        restartBtn.addEventListener('click', resetGame);
+        
+        // Spiel starten
+        playerReset();
+        updateScore();
+        update();
+    </script>
+</body>
+</html>
